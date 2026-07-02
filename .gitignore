@@ -1,3 +1,10 @@
+node_modules/
+dist/
+dist-archive/
+src-tauri/target/
+*.local
+/.idea
+/.vscode
 # Logs
 logs
 *.log

@@ -1,4 +1,25 @@
 {
+  "package": {
+    "productName": "Lyra",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "bundle": {
+      "identifier": "com.example.lyra"
+    },
+    "windows": [
+      {
+        "title": "Lyra",
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  }
+}
+{
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "tauri-app",
   "version": "0.1.0",

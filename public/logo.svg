@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle -->
+  <rect width="64" height="64" rx="16" fill="#0B0D1A"/>
+  <rect x="1" y="1" width="62" height="62" rx="15" stroke="url(#border-gradient)" stroke-width="2" fill="none"/>
+  
+  <!-- Pixel music note -->
+  <!-- Note head 1 -->
+  <rect x="16" y="38" width="4" height="4" fill="#C77DFF"/>
+  <rect x="20" y="38" width="4" height="4" fill="#C77DFF"/>
+  <rect x="16" y="42" width="4" height="4" fill="#6C5CE7"/>
+  <rect x="20" y="42" width="4" height="4" fill="#6C5CE7"/>
+  <rect x="12" y="42" width="4" height="4" fill="#C77DFF"/>
+  <rect x="12" y="38" width="4" height="4" fill="#6C5CE7"/>
+  
+  <!-- Note stem 1 -->
+  <rect x="22" y="18" width="4" height="20" fill="#C77DFF"/>
+  
+  <!-- Note head 2 -->
+  <rect x="38" y="34" width="4" height="4" fill="#59E1FF"/>
+  <rect x="42" y="34" width="4" height="4" fill="#59E1FF"/>
+  <rect x="38" y="38" width="4" height="4" fill="#6C5CE7"/>
+  <rect x="42" y="38" width="4" height="4" fill="#6C5CE7"/>
+  <rect x="46" y="34" width="4" height="4" fill="#59E1FF"/>
+  <rect x="46" y="38" width="4" height="4" fill="#6C5CE7"/>
+  
+  <!-- Note stem 2 -->
+  <rect x="46" y="14" width="4" height="20" fill="#59E1FF"/>
+  
+  <!-- Beam connecting notes -->
+  <rect x="22" y="14" width="28" height="4" fill="url(#beam-gradient)"/>
+  <rect x="22" y="18" width="28" height="4" fill="url(#beam-gradient)" opacity="0.6"/>
+  
+  <!-- Pixel sparkles -->
+  <rect x="8" y="14" width="2" height="2" fill="#C77DFF" opacity="0.6"/>
+  <rect x="54" y="46" width="2" height="2" fill="#59E1FF" opacity="0.6"/>
+  <rect x="52" y="8" width="2" height="2" fill="#C77DFF" opacity="0.4"/>
+  <rect x="6" y="50" width="2" height="2" fill="#59E1FF" opacity="0.4"/>
+  
+  <defs>
+    <linearGradient id="border-gradient" x1="0" y1="0" x2="64" y2="64">
+      <stop offset="0%" stop-color="#6C5CE7"/>
+      <stop offset="100%" stop-color="#59E1FF"/>
+    </linearGradient>
+    <linearGradient id="beam-gradient" x1="22" y1="0" x2="50" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C77DFF"/>
+      <stop offset="100%" stop-color="#59E1FF"/>
+    </linearGradient>
+  </defs>
+</svg>

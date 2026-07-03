@@ -12,7 +12,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   return (
     <div className="lyra-settings-panel">
       <div className="lyra-settings-header">
-        <h2>Lyra Settings</h2>
+        <h2>LYRA</h2>
         <button className="lyra-close-btn" onClick={onClose} aria-label="Close settings">
           ✕
         </button>

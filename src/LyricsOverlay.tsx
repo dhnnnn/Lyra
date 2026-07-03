@@ -74,9 +74,9 @@ export default function LyricsOverlay() {
       >
         <div className="lyra-drag-region" data-tauri-drag-region />
         <div className="lyra-empty">
-          <div className="lyra-empty-icon">♪</div>
-          <p style={{ color: themeConfig.dimColor, fontFamily: themeConfig.fontFamily }}>
-            Play a song on any media player to see lyrics
+          <img src="/logo.svg" alt="Lyra" className="lyra-empty-logo" />
+          <p style={{ color: themeConfig.dimColor, fontFamily: "'Pixelify Sans', monospace", fontSize: 13 }}>
+            Play a song to see lyrics
           </p>
         </div>
       </div>

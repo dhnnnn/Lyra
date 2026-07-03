@@ -1,4 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap');
+
+/* ─── Design System Variables ───────────────────────────────────── */
+
+:root {
+  --lyra-bg-deep: #0B0D1A;
+  --lyra-bg-surface: #1B1F3B;
+  --lyra-purple: #6C5CE7;
+  --lyra-purple-light: #C77DFF;
+  --lyra-cyan: #59E1FF;
+  --lyra-white: #FFFFFF;
+  --lyra-dim: rgba(255, 255, 255, 0.4);
+
+  --lyra-gradient-purple: linear-gradient(135deg, #6C5CE7, #C77DFF);
+  --lyra-gradient-cyan: linear-gradient(135deg, #59E1FF, #6C5CE7);
+
+  --lyra-font-primary: 'Pixelify Sans', 'Press Start 2P', monospace;
+  --lyra-font-secondary: 'Inter', 'Segoe UI', sans-serif;
+
+  --lyra-radius-sm: 8px;
+  --lyra-radius-md: 16px;
+  --lyra-radius-lg: 24px;
+
+  --lyra-shadow-sm: 0 4px 8px rgba(0, 0, 0, 0.25);
+  --lyra-shadow-md: 0 8px 16px rgba(11, 13, 26, 0.35);
+  --lyra-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
 
 /* ─── Reset ─────────────────────────────────────────────────────── */
 
@@ -13,7 +40,7 @@ html, body, #root {
   height: 100%;
   overflow: hidden;
   background: transparent;
-  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-family: var(--lyra-font-secondary);
 }
 
 /* ─── Layout ────────────────────────────────────────────────────── */
@@ -29,8 +56,9 @@ html, body, #root {
   height: 100%;
   display: flex;
   flex-direction: column;
-  border-radius: 16px;
+  border-radius: var(--lyra-radius-md);
   overflow: hidden;
+  border: 1px solid rgba(108, 92, 231, 0.3);
 }
 
 /* ─── Drag Region ───────────────────────────────────────────────── */
@@ -49,10 +77,11 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: 14px 20px;
   flex-shrink: 0;
   cursor: grab;
   -webkit-app-region: drag;
+  border-bottom: 1px solid rgba(108, 92, 231, 0.15);
 }
 
 .lyra-header * {
@@ -72,26 +101,30 @@ html, body, #root {
 }
 
 .lyra-track-name {
-  font-size: 16px;
+  font-family: var(--lyra-font-primary);
+  font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.5px;
 }
 
 .lyra-artist-name {
-  font-size: 13px;
+  font-family: var(--lyra-font-secondary);
+  font-size: 12px;
   font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .lyra-play-status {
-  font-size: 11px;
+  font-family: var(--lyra-font-primary);
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   flex-shrink: 0;
 }
 
@@ -101,21 +134,23 @@ html, body, #root {
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.4; }
 }
 
 /* ─── Progress Bar ──────────────────────────────────────────────── */
 
 .lyra-progress-container {
   height: 3px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(108, 92, 231, 0.15);
   flex-shrink: 0;
 }
 
 .lyra-progress-bar {
   height: 100%;
+  background: var(--lyra-gradient-purple);
   transition: width 0.3s linear;
   border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px rgba(108, 92, 231, 0.5);
 }
 
 /* ─── Lyrics ────────────────────────────────────────────────────── */
@@ -144,7 +179,7 @@ html, body, #root {
 }
 
 .lyra-line {
-  padding: 8px 0;
+  padding: 10px 0;
   line-height: 1.4;
   text-align: center;
   cursor: default;
@@ -154,10 +189,12 @@ html, body, #root {
 /* ─── Source Indicator ──────────────────────────────────────────── */
 
 .lyra-source-indicator {
-  font-size: 11px;
-  padding: 4px 12px;
+  font-family: var(--lyra-font-primary);
+  font-size: 10px;
+  padding: 6px 14px;
   text-align: right;
-  opacity: 0.5;
+  opacity: 0.4;
+  letter-spacing: 0.5px;
 }
 
 /* ─── Empty / Loading States ────────────────────────────────────── */
@@ -171,9 +208,17 @@ html, body, #root {
   gap: 16px;
 }
 
+.lyra-empty-logo {
+  width: 64px;
+  height: 64px;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 16px rgba(108, 92, 231, 0.4));
+}
+
 .lyra-empty-icon {
-  font-size: 64px;
+  font-size: 56px;
   opacity: 0.3;
+  filter: drop-shadow(0 0 12px rgba(108, 92, 231, 0.4));
 }
 
 .lyra-loading {
@@ -186,10 +231,10 @@ html, body, #root {
 }
 
 .lyra-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top-color: currentColor;
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(108, 92, 231, 0.2);
+  border-top-color: var(--lyra-purple-light);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -209,28 +254,30 @@ html, body, #root {
 
 .lyra-settings-toggle {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 44px;
-  height: 44px;
+  bottom: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: white;
-  font-size: 20px;
+  background: var(--lyra-bg-surface);
+  border: 1px solid rgba(108, 92, 231, 0.4);
+  color: var(--lyra-purple-light);
+  font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
   z-index: 1000;
-  opacity: 0.4;
+  opacity: 0.5;
+  box-shadow: var(--lyra-shadow-sm);
 }
 
 .lyra-settings-toggle:hover {
   opacity: 1;
   transform: scale(1.1);
+  border-color: var(--lyra-purple-light);
+  box-shadow: 0 0 12px rgba(199, 125, 255, 0.3);
 }
 
 /* ─── Settings Panel ────────────────────────────────────────────── */
@@ -240,16 +287,16 @@ html, body, #root {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 420px;
+  width: 400px;
   max-height: 80vh;
-  background: rgba(20, 20, 30, 0.95);
+  background: var(--lyra-bg-deep);
   backdrop-filter: blur(24px);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--lyra-radius-md);
+  border: 1px solid rgba(108, 92, 231, 0.3);
   padding: 24px;
   z-index: 2000;
   overflow-y: auto;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--lyra-shadow-lg), 0 0 40px rgba(108, 92, 231, 0.1);
 }
 
 .lyra-settings-header {
@@ -260,37 +307,42 @@ html, body, #root {
 }
 
 .lyra-settings-header h2 {
-  color: #ffffff;
-  font-size: 20px;
+  font-family: var(--lyra-font-primary);
+  color: var(--lyra-white);
+  font-size: 18px;
   font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .lyra-close-btn {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 18px;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--lyra-radius-sm);
   transition: all 0.2s;
 }
 
 .lyra-close-btn:hover {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--lyra-purple-light);
+  background: rgba(108, 92, 231, 0.15);
 }
+
+/* ─── Settings Sections ─────────────────────────────────────────── */
 
 .lyra-settings-section {
   margin-bottom: 24px;
 }
 
 .lyra-settings-section h3 {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 13px;
+  font-family: var(--lyra-font-primary);
+  color: var(--lyra-purple-light);
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   margin-bottom: 12px;
 }
 
@@ -299,8 +351,8 @@ html, body, #root {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  color: #1db954;
-  font-size: 14px;
+  color: var(--lyra-cyan);
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -308,7 +360,8 @@ html, body, #root {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #1db954;
+  background: var(--lyra-cyan);
+  box-shadow: 0 0 6px rgba(89, 225, 255, 0.5);
 }
 
 /* ─── Theme Grid ────────────────────────────────────────────────── */
@@ -321,8 +374,9 @@ html, body, #root {
 
 .lyra-theme-btn {
   padding: 12px;
-  border-radius: 10px;
-  font-size: 13px;
+  border-radius: var(--lyra-radius-sm);
+  font-family: var(--lyra-font-secondary);
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -330,7 +384,8 @@ html, body, #root {
 
 .lyra-theme-btn:hover,
 .lyra-theme-btn.active {
-  transform: scale(1.02);
+  transform: scale(1.03);
+  box-shadow: 0 0 12px rgba(108, 92, 231, 0.3);
 }
 
 /* ─── Slider ────────────────────────────────────────────────────── */
@@ -340,7 +395,7 @@ html, body, #root {
   height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(108, 92, 231, 0.2);
   border-radius: 2px;
   outline: none;
 }
@@ -348,23 +403,24 @@ html, body, #root {
 .lyra-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #1db954;
+  background: var(--lyra-purple-light);
   cursor: pointer;
   transition: transform 0.2s;
+  box-shadow: 0 0 8px rgba(199, 125, 255, 0.5);
 }
 
 .lyra-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.3);
 }
 
 .lyra-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #1db954;
+  background: var(--lyra-purple-light);
   cursor: pointer;
   border: none;
 }

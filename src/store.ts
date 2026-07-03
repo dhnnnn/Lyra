@@ -58,9 +58,12 @@ function findActiveLineIndex(lines: LyricLine[], progressMs: number): number {
 
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 let tickInterval: ReturnType<typeof setInterval> | null = null;
-let isPolling = false; // guard against overlapping polls
-let lastPollTime = 0; // timestamp when we last received progress from OS
-let lastPollProgress = 0; // progress_ms at that time
+let isPolling = false;
+
+// Interpolation state — tracks playback position locally
+let anchorTime = 0;      // Date.now() when we anchored the position
+let anchorProgress = 0;  // progress_ms at anchor time
+let lastOsProgress = -1; // last progress_ms reported by OS (to detect changes)
 
 export const useLyraStore = create<LyraState>((set, get) => ({
   // Initial state
@@ -78,19 +81,11 @@ export const useLyraStore = create<LyraState>((set, get) => ({
   fontSize: 28,
 
   pollNowPlaying: () => {
-    // Clear existing intervals
-    if (pollInterval) {
-      clearInterval(pollInterval);
-    }
-    if (tickInterval) {
-      clearInterval(tickInterval);
-    }
+    if (pollInterval) clearInterval(pollInterval);
+    if (tickInterval) clearInterval(tickInterval);
 
     const poll = async () => {
-      // Skip if previous poll is still running (prevent stacking)
-      if (isPolling) {
-        return;
-      }
+      if (isPolling) return;
       isPolling = true;
 
       try {
@@ -98,30 +93,56 @@ export const useLyraStore = create<LyraState>((set, get) => ({
         const state = get();
         const prevTrack = state.currentTrack;
 
-        // Check if track changed
         const trackChanged =
           !prevTrack ||
           prevTrack.track_name !== track.track_name ||
           prevTrack.artist_name !== track.artist_name;
 
-        // Store the OS-reported progress and time for local interpolation
-        lastPollTime = Date.now();
-        lastPollProgress = track.progress_ms;
+        // Detect if OS actually gave us a new progress value
+        const osProgressChanged = track.progress_ms !== lastOsProgress;
+        lastOsProgress = track.progress_ms;
 
-        // Compute active line
+        if (osProgressChanged || trackChanged) {
+          // OS gave us a real position update — re-anchor our interpolation
+          anchorTime = Date.now();
+          anchorProgress = track.progress_ms;
+        }
+        // If OS progress didn't change but song is playing,
+        // we DON'T reset the anchor — let local interpolation continue
+
+        // Handle play/pause transitions
+        if (!track.is_playing && state.isPlaying) {
+          // Just paused — freeze current interpolated position as anchor
+          const elapsed = Date.now() - anchorTime;
+          anchorProgress = anchorProgress + elapsed;
+          anchorTime = Date.now();
+        } else if (track.is_playing && !state.isPlaying) {
+          // Just resumed — re-anchor from OS position
+          anchorTime = Date.now();
+          anchorProgress = track.progress_ms;
+        }
+
+        // Calculate current interpolated progress
+        const now = Date.now();
+        const currentProgress = track.is_playing
+          ? Math.min(anchorProgress + (now - anchorTime), track.duration_ms)
+          : anchorProgress;
+
         const lines = state.lyricLines;
-        const newActiveIndex = findActiveLineIndex(lines, track.progress_ms);
+        const newActiveIndex = findActiveLineIndex(lines, currentProgress);
 
         set({
           currentTrack: track,
           isPlaying: track.is_playing,
-          progressMs: track.progress_ms,
+          progressMs: currentProgress,
           durationMs: track.duration_ms,
           activeLineIndex: newActiveIndex,
         });
 
-        // If track changed, fetch new lyrics
         if (trackChanged) {
+          // Reset anchor for new track
+          anchorTime = Date.now();
+          anchorProgress = track.progress_ms;
           get().fetchLyricsForTrack(track);
         }
       } catch (error) {
@@ -134,23 +155,21 @@ export const useLyraStore = create<LyraState>((set, get) => ({
       }
     };
 
-    // Local tick: interpolate progress between OS polls for smooth lyric sync
+    // Local tick: advance progress smoothly between polls
     const tick = () => {
       const state = get();
       if (!state.isPlaying || state.lyricLines.length === 0) return;
 
-      // Calculate interpolated progress based on elapsed time since last poll
-      const elapsed = Date.now() - lastPollTime;
+      const now = Date.now();
       const interpolatedProgress = Math.min(
-        lastPollProgress + elapsed,
+        anchorProgress + (now - anchorTime),
         state.durationMs
       );
 
-      // Find active line based on interpolated progress
       const newActiveIndex = findActiveLineIndex(state.lyricLines, interpolatedProgress);
 
-      // Only update if line changed or progress difference is significant
-      if (state.activeLineIndex !== newActiveIndex || Math.abs(state.progressMs - interpolatedProgress) > 500) {
+      // Update if line index changed or progress moved enough for progress bar
+      if (state.activeLineIndex !== newActiveIndex || Math.abs(state.progressMs - interpolatedProgress) > 300) {
         set({
           progressMs: interpolatedProgress,
           activeLineIndex: newActiveIndex,
@@ -158,23 +177,19 @@ export const useLyraStore = create<LyraState>((set, get) => ({
       }
     };
 
-    // Poll OS every 5 seconds (media session API is expensive)
+    // Initial poll
     poll();
+
+    // Poll OS every 5s (just to detect track changes & pause/play)
     pollInterval = setInterval(poll, 5000);
 
-    // Tick locally every 250ms for smooth lyric progression
-    tickInterval = setInterval(tick, 250);
+    // Tick every 200ms for smooth lyric sync
+    tickInterval = setInterval(tick, 200);
   },
 
   stopPolling: () => {
-    if (pollInterval) {
-      clearInterval(pollInterval);
-      pollInterval = null;
-    }
-    if (tickInterval) {
-      clearInterval(tickInterval);
-      tickInterval = null;
-    }
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
   },
 
   fetchLyricsForTrack: async (track: NowPlaying) => {
@@ -191,7 +206,7 @@ export const useLyraStore = create<LyraState>((set, get) => ({
 
       console.log(`[Lyra] ✅ Got ${result.lines.length} lyric lines from ${result.source}`);
 
-      // Compute initial active line based on current progress
+      // Compute initial active line based on current interpolated progress
       const activeLineIndex = findActiveLineIndex(result.lines, get().progressMs);
 
       set({

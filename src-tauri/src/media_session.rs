@@ -111,6 +111,9 @@ mod win {
             == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing;
 
         // Timeline (synchronous)
+        // Use LastUpdatedTime + Position to calculate actual current position
+        // Browser media sessions often don't update Position in real-time,
+        // but LastUpdatedTime tells us WHEN the Position was valid
         let (progress_ms, duration_ms) = match session.GetTimelineProperties() {
             Ok(timeline) => {
                 let pos = timeline
@@ -121,7 +124,29 @@ mod win {
                     .EndTime()
                     .map(|d| (d.Duration / 10_000) as u64)
                     .unwrap_or(0);
-                (pos, end)
+                
+                // Calculate real position: reported_position + time_elapsed_since_last_update
+                let real_pos = if is_playing {
+                    if let Ok(last_updated) = timeline.LastUpdatedTime() {
+                        // LastUpdatedTime is a DateTime (100-ns ticks since 1601-01-01)
+                        let last_updated_ticks = last_updated.UniversalTime;
+                        // Get current time as FILETIME (100-ns intervals since 1601-01-01)
+                        let sys_time = unsafe {
+                            windows::Win32::System::SystemInformation::GetSystemTimeAsFileTime()
+                        };
+                        let now_100ns = ((sys_time.dwHighDateTime as i64) << 32) | (sys_time.dwLowDateTime as i64);
+                        let elapsed_ms = ((now_100ns - last_updated_ticks) / 10_000).max(0) as u64;
+                        
+                        let calculated = pos + elapsed_ms;
+                        calculated.min(end)
+                    } else {
+                        pos
+                    }
+                } else {
+                    pos
+                };
+                
+                (real_pos, end)
             }
             Err(_) => (0, 0),
         };

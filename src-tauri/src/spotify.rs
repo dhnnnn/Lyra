@@ -12,7 +12,7 @@ fn get_client_secret() -> String {
 }
 
 fn get_redirect_uri() -> String {
-    std::env::var("SPOTIFY_REDIRECT_URI").unwrap_or_else(|_| "https://nonelaborative-pseudomonocyclic-kimberly.ngrok-free.dev".to_string())
+    std::env::var("SPOTIFY_REDIRECT_URI").unwrap_or_else(|_| "https://nonelaborative-pseudomonocyclic-kimberly.ngrok-free.dev/callback.html".to_string())
 }
 
 const SCOPES: &str = "user-read-currently-playing user-read-playback-state";
@@ -97,12 +97,18 @@ use tauri_plugin_opener::OpenerExt;
 /// Generate Spotify OAuth authorization URL and open it in the default browser
 #[tauri::command]
 pub fn get_spotify_auth_url(app: tauri::AppHandle) -> Result<SpotifyAuthUrl, String> {
+    let redirect = get_redirect_uri();
+    eprintln!("[Lyra] redirect_uri EXACT value = [{}]", redirect);
+    eprintln!("[Lyra] redirect_uri length = {}", redirect.len());
+    
     let url = format!(
         "https://accounts.spotify.com/authorize?client_id={}&response_type=code&redirect_uri={}&scope={}&show_dialog=true",
         get_client_id(),
-        urlencoding::encode(&get_redirect_uri()),
+        urlencoding::encode(&redirect),
         urlencoding::encode(SCOPES)
     );
+    
+    eprintln!("[Lyra] Full auth URL = {}", url);
     
     // Open the URL in default browser using tauri-plugin-opener
     app.opener()

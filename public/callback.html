@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lyra - Spotify Auth</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 520px;
+            width: 90%;
+            text-align: center;
+            backdrop-filter: blur(12px);
+        }
+        h1 { font-size: 24px; margin-bottom: 8px; }
+        .subtitle { color: #aaa; margin-bottom: 24px; font-size: 14px; }
+        .code-box {
+            background: rgba(0,0,0,0.4);
+            border: 2px solid #1db954;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #1db954;
+            user-select: all;
+            cursor: pointer;
+            position: relative;
+        }
+        .code-box:hover { background: rgba(29, 185, 84, 0.1); }
+        .copy-btn {
+            background: #1db954;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 32px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: background 0.2s;
+        }
+        .copy-btn:hover { background: #1ed760; }
+        .copy-btn.copied { background: #4caf50; }
+        .instructions {
+            margin-top: 20px;
+            color: #888;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .error { color: #ff6b6b; }
+        .success { color: #1db954; font-weight: bold; margin-top: 8px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Lyra Auth</h1>
+        <p class="subtitle">Spotify Authorization Callback</p>
+        
+        <div id="content"></div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const error = params.get('error');
+        const content = document.getElementById('content');
+
+        if (error) {
+            content.innerHTML = `
+                <p class="error">❌ Authorization failed: ${error}</p>
+                <p class="instructions">Please close this tab and try again in Lyra.</p>
+            `;
+        } else if (code) {
+            content.innerHTML = `
+                <p>✅ Authorization successful!</p>
+                <p style="margin-top:8px; color:#aaa; font-size:13px;">Your auth code:</p>
+                <div class="code-box" id="codeBox" title="Click to select">${code}</div>
+                <button class="copy-btn" id="copyBtn" onclick="copyCode()">📋 Copy Code</button>
+                <p class="success" id="successMsg">✓ Copied!</p>
+                <div class="instructions">
+                    <p>📌 Now go back to <strong>Lyra</strong> app:</p>
+                    <p>1. Open Settings (⚙)</p>
+                    <p>2. Paste this code in the input field</p>
+                    <p>3. Click "Submit"</p>
+                    <p style="margin-top:8px;">You can close this tab after pasting.</p>
+                </div>
+            `;
+        } else {
+            content.innerHTML = `
+                <p class="error">⚠ No authorization code found.</p>
+                <p class="instructions">Please start the login process from the Lyra app.</p>
+            `;
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.getElementById('copyBtn');
+                const msg = document.getElementById('successMsg');
+                btn.textContent = '✓ Copied!';
+                btn.classList.add('copied');
+                msg.style.display = 'block';
+                setTimeout(() => {
+                    btn.textContent = '📋 Copy Code';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

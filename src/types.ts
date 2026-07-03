@@ -1,3 +1,5 @@
+// ─── Media Session Types ───────────────────────────────────────────
+
 export interface NowPlaying {
   is_playing: boolean;
   track_name: string;
@@ -7,6 +9,8 @@ export interface NowPlaying {
   progress_ms: number;
   duration_ms: number;
 }
+
+// ─── Lyrics Types ──────────────────────────────────────────────────
 
 export interface LyricLine {
   time_ms: number;
@@ -20,6 +24,8 @@ export interface LyricsResult {
   lines: LyricLine[];
   source: string;
 }
+
+// ─── Theme Types ───────────────────────────────────────────────────
 
 export type ThemeName = "classic" | "neon" | "minimal" | "story";
 

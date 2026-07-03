@@ -12,9 +12,9 @@ Lyra adalah aplikasi desktop overlay yang mendeteksi lagu yang sedang diputar di
 - Pengguna umum yang suka karaoke santai di depan laptop
 
 ## 4. User Journey
-1. User login Spotify (OAuth).
-2. User play lagu di Spotify (web/desktop).
-3. Lyra otomatis mendeteksi lagu yang sedang diputar.
+1. User buka Lyra (tidak perlu login apapun).
+2. User play lagu di media player apapun (Spotify, WMP, Chrome/YouTube, foobar2000, dll).
+3. Lyra otomatis mendeteksi lagu via Windows Media Session API.
 4. Lyra mengambil lirik dari LRCLIB.
 5. Overlay muncul dan lirik ter-highlight otomatis mengikuti progres lagu.
 6. Saat lagu berganti, proses berulang otomatis tanpa aksi user.
@@ -24,10 +24,10 @@ Lyra adalah aplikasi desktop overlay yang mendeteksi lagu yang sedang diputar di
              User
                │
                ▼
-        Spotify Web/Desktop
+        Any Media Player (Spotify, WMP, Chrome, dll)
                │
                ▼
-     Spotify Web API (Currently Playing)
+     Windows Media Session API (OS-level)
                │
                ▼
         Lyrics Engine (Tauri/Rust)
@@ -44,14 +44,14 @@ Lyra adalah aplikasi desktop overlay yang mendeteksi lagu yang sedang diputar di
                ▼
      Transparent Always-on-Top Window
 ```
-Semua proses berjalan lokal di komputer user. Tidak ada backend/server — hanya berkomunikasi langsung ke Spotify API dan LRCLIB API.
+Semua proses berjalan lokal di komputer user. Tidak ada backend/server — hanya berkomunikasi langsung ke LRCLIB API untuk lirik. Deteksi lagu sepenuhnya via OS-level Windows Media Session.
 
 ## 6. Tech Stack & Alasan
 | Komponen | Pilihan | Alasan |
 |---|---|---|
 | UI Framework | React + TypeScript | Familiar, ekosistem animasi kuat (Framer Motion) |
 | Desktop Shell | Tauri | RAM lebih ringan dari Electron, native window control (transparent, always-on-top, click-through) |
-| Data Musik | Spotify Web API | Sumber currently-playing paling reliable |
+| Data Musik | Windows Media Session API | Deteksi dari semua media player tanpa perlu auth/API key |
 | Data Lirik | LRCLIB API | Gratis, format LRC sinkron, tanpa perlu API key khusus |
 | Animasi | Framer Motion + CSS | Transisi highlight halus |
 

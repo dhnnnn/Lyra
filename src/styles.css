@@ -125,6 +125,7 @@ html, body, #root {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
+  position: relative;
 }
 
 .lyra-lyrics-container::-webkit-scrollbar {
@@ -138,7 +139,7 @@ html, body, #root {
 }
 
 .lyra-spacer {
-  min-height: 40vh;
+  min-height: 50%;
   flex-shrink: 0;
 }
 

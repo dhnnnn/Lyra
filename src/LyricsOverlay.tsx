@@ -26,18 +26,31 @@ export default function LyricsOverlay() {
     lineRefs.current[index] = el;
   }, []);
 
-  // Auto-scroll to active line
+  // Auto-scroll to keep active line centered
   useEffect(() => {
     const container = containerRef.current;
     const activeLine = lineRefs.current[activeLineIndex];
     if (!container || !activeLine || lyricLines.length === 0) return;
 
-    const containerRect = container.getBoundingClientRect();
-    const lineRect = activeLine.getBoundingClientRect();
-    const lineOffsetTop = activeLine.offsetTop;
-    const targetScroll = lineOffsetTop - containerRect.height / 2 + lineRect.height / 2;
+    const containerHeight = container.clientHeight;
+    const containerScrollTop = container.scrollTop;
 
-    container.scrollTo({ top: Math.max(0, targetScroll), behavior: "smooth" });
+    // Use getBoundingClientRect for accurate positioning regardless of nesting
+    const containerTop = container.getBoundingClientRect().top;
+    const lineTop = activeLine.getBoundingClientRect().top;
+    const lineHeight = activeLine.offsetHeight;
+
+    // Current position of the line relative to scroll container's viewport
+    const lineRelativeTop = lineTop - containerTop;
+
+    // We want the line at 50% of container height
+    const targetCenter = containerHeight / 2 - lineHeight / 2;
+    const scrollDelta = lineRelativeTop - targetCenter;
+
+    container.scrollTo({
+      top: Math.max(0, containerScrollTop + scrollDelta),
+      behavior: "smooth",
+    });
   }, [activeLineIndex, lyricLines.length]);
 
   // Reset scroll on track change

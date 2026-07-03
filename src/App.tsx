@@ -5,33 +5,22 @@ import LyricsOverlay from "./LyricsOverlay";
 
 function App() {
   const {
-    isAuthenticated,
-    authLoading,
     theme,
     opacity,
     fontSize,
-    login,
-    handleAuthCode,
-    checkAuth,
+    currentTrack,
+    pollNowPlaying,
     setTheme,
     setOpacity,
     setFontSize,
   } = useLyraStore();
 
   const [showSettings, setShowSettings] = useState(false);
-  const [authCodeInput, setAuthCodeInput] = useState("");
 
   useEffect(() => {
-    checkAuth();
-
-    // Check URL for auth callback code
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
-    if (code) {
-      handleAuthCode(code);
-      // Clean up URL
-      window.history.replaceState({}, "", "/");
-    }
+    // Start polling Windows Media Session immediately - no auth needed!
+    console.log("[Lyra] Starting media session polling...");
+    pollNowPlaying();
   }, []);
 
   return (
@@ -58,49 +47,18 @@ function App() {
             </button>
           </div>
 
-          {/* Auth Section */}
+          {/* Status Section */}
           <div className="lyra-settings-section">
-            <h3>Spotify Connection</h3>
-            {isAuthenticated ? (
+            <h3>Now Playing</h3>
+            {currentTrack ? (
               <div className="lyra-auth-status connected">
-                <span className="lyra-status-dot" /> Connected to Spotify
+                <span className="lyra-status-dot" /> {currentTrack.track_name} — {currentTrack.artist_name}
+                <br />
+                <small style={{ opacity: 0.6 }}>via {currentTrack.source}</small>
               </div>
             ) : (
-              <div className="lyra-auth-section">
-                <p className="lyra-auth-hint">
-                  1. Click "Login" below<br />
-                  2. Authorize in browser<br />
-                  3. Copy the code from the redirect URL<br />
-                  4. Paste it below
-                </p>
-                <button
-                  className="lyra-btn lyra-btn-primary"
-                  onClick={login}
-                  disabled={authLoading}
-                >
-                  {authLoading ? "Loading..." : "Login with Spotify"}
-                </button>
-                <div className="lyra-code-input-group">
-                  <input
-                    type="text"
-                    className="lyra-input"
-                    placeholder="Paste auth code here..."
-                    value={authCodeInput}
-                    onChange={(e) => setAuthCodeInput(e.target.value)}
-                  />
-                  <button
-                    className="lyra-btn lyra-btn-secondary"
-                    onClick={() => {
-                      if (authCodeInput.trim()) {
-                        handleAuthCode(authCodeInput.trim());
-                        setAuthCodeInput("");
-                      }
-                    }}
-                    disabled={!authCodeInput.trim() || authLoading}
-                  >
-                    Submit
-                  </button>
-                </div>
+              <div className="lyra-auth-status">
+                <span style={{ opacity: 0.6 }}>No media playing. Play a song in any media player to get started!</span>
               </div>
             )}
           </div>

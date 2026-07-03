@@ -17,14 +17,105 @@ pub struct LyricsResult {
     pub source: String,
 }
 
-/// LRCLIB API response
+/// LRCLIB API response (for /api/get)
 #[derive(Debug, Deserialize)]
 struct LrcLibResponse {
+    #[serde(rename = "trackName")]
     track_name: Option<String>,
+    #[serde(rename = "artistName")]
     artist_name: Option<String>,
+    #[serde(rename = "albumName")]
     album_name: Option<String>,
+    #[serde(rename = "syncedLyrics")]
     synced_lyrics: Option<String>,
+    #[serde(rename = "plainLyrics")]
     plain_lyrics: Option<String>,
+}
+
+/// LRCLIB search response (for /api/search)
+#[derive(Debug, Deserialize)]
+struct LrcLibSearchItem {
+    #[serde(rename = "trackName")]
+    track_name: Option<String>,
+    #[serde(rename = "artistName")]
+    artist_name: Option<String>,
+    #[serde(rename = "albumName")]
+    album_name: Option<String>,
+    #[serde(rename = "syncedLyrics")]
+    synced_lyrics: Option<String>,
+    #[serde(rename = "plainLyrics")]
+    plain_lyrics: Option<String>,
+}
+
+/// Clean up track name from browser media sessions
+/// Removes things like "(Official Video)", "(Lyric Video)", etc.
+fn clean_track_name(name: &str) -> String {
+    let cleaned = name.to_string();
+    
+    // Common patterns to remove
+    let patterns = [
+        "(Official Video)",
+        "(Official Music Video)",
+        "(Official Lyric Video)",
+        "(Official Audio)",
+        "(Lyric Video)",
+        "(Lyrics)",
+        "(Audio)",
+        "(MV)",
+        "(Music Video)",
+        "[Official Video]",
+        "[Official Music Video]",
+        "[Official Lyric Video]",
+        "[Official Audio]",
+        "[Lyric Video]",
+        "[Lyrics]",
+        "[Audio]",
+        "[MV]",
+        "[Music Video]",
+        "| Official Video",
+        "| Official Music Video",
+        "| Official Lyric Video",
+        "- Official Video",
+        "- Official Music Video",
+        "- Official Lyric Video",
+    ];
+    
+    let mut result = cleaned;
+    for pattern in &patterns {
+        // Case-insensitive removal
+        let lower = result.to_lowercase();
+        let pattern_lower = pattern.to_lowercase();
+        if let Some(pos) = lower.find(&pattern_lower) {
+            result = format!("{}{}", &result[..pos], &result[pos + pattern.len()..]);
+        }
+    }
+    
+    // If title contains " - " (like "Artist - Song"), try to extract song part
+    // But only if there's no separate artist info
+    result = result.trim().to_string();
+    
+    // Remove trailing whitespace and dashes
+    result = result.trim_end_matches('-').trim_end_matches('|').trim().to_string();
+    
+    result
+}
+
+/// Extract artist and track from a combined title like "Artist - Track"
+fn split_artist_track(title: &str, given_artist: &str) -> (String, String) {
+    // If the title contains " - " and artist seems to be in the title
+    if let Some(dash_pos) = title.find(" - ") {
+        let before = title[..dash_pos].trim();
+        let after = title[dash_pos + 3..].trim();
+        
+        // Check if artist name is the part before dash
+        if before.to_lowercase().contains(&given_artist.to_lowercase())
+            || given_artist.to_lowercase().contains(&before.to_lowercase())
+        {
+            return (before.to_string(), clean_track_name(after));
+        }
+    }
+    
+    (given_artist.to_string(), clean_track_name(title))
 }
 
 /// Fetch lyrics from LRCLIB API
@@ -35,27 +126,65 @@ pub async fn fetch_lyrics(
     album_name: Option<String>,
 ) -> Result<LyricsResult, String> {
     let client = reqwest::Client::new();
+    let ua = "Lyra/0.1.0 (https://github.com/dhnnn/Lyra)";
 
+    // Clean up track name (remove "(Official Video)" etc.)
+    let (clean_artist, clean_track) = split_artist_track(&track_name, &artist_name);
+    
+    eprintln!("[Lyra] Lyrics lookup: '{}' by '{}' (original: '{}' by '{}')", 
+        clean_track, clean_artist, track_name, artist_name);
+
+    // === Attempt 1: Exact match with /api/get ===
+    let result = try_exact_match(&client, ua, &clean_track, &clean_artist, &album_name).await;
+    if let Ok(lyrics) = result {
+        eprintln!("[Lyra] ✅ Found lyrics via exact match");
+        return Ok(lyrics);
+    }
+
+    // === Attempt 2: Search API with cleaned track name ===
+    let result = try_search(&client, ua, &clean_track, &clean_artist).await;
+    if let Ok(lyrics) = result {
+        eprintln!("[Lyra] ✅ Found lyrics via search");
+        return Ok(lyrics);
+    }
+
+    // === Attempt 3: Search with just the track name (broader search) ===
+    let result = try_search(&client, ua, &clean_track, "").await;
+    if let Ok(lyrics) = result {
+        eprintln!("[Lyra] ✅ Found lyrics via broad search");
+        return Ok(lyrics);
+    }
+
+    eprintln!("[Lyra] ❌ No lyrics found for '{}' by '{}'", clean_track, clean_artist);
+    Err(format!("Lyrics not found for '{}' by '{}'", clean_track, clean_artist))
+}
+
+/// Try exact match with LRCLIB /api/get
+async fn try_exact_match(
+    client: &reqwest::Client,
+    ua: &str,
+    track_name: &str,
+    artist_name: &str,
+    album_name: &Option<String>,
+) -> Result<LyricsResult, String> {
     let mut params = vec![
-        ("track_name", track_name.clone()),
-        ("artist_name", artist_name.clone()),
+        ("track_name", track_name.to_string()),
+        ("artist_name", artist_name.to_string()),
     ];
 
     if let Some(ref album) = album_name {
-        params.push(("album_name", album.clone()));
+        if !album.is_empty() {
+            params.push(("album_name", album.clone()));
+        }
     }
 
     let response = client
         .get("https://lrclib.net/api/get")
         .query(&params)
-        .header("User-Agent", "Lyra/0.1.0 (https://github.com/dhnnn/Lyra)")
+        .header("User-Agent", ua)
         .send()
         .await
         .map_err(|e| format!("LRCLIB request failed: {}", e))?;
-
-    if response.status() == 404 {
-        return Err("Lyrics not found on LRCLIB".to_string());
-    }
 
     if !response.status().is_success() {
         return Err(format!("LRCLIB returned status: {}", response.status()));
@@ -66,26 +195,101 @@ pub async fn fetch_lyrics(
         .await
         .map_err(|e| format!("Failed to parse LRCLIB response: {}", e))?;
 
-    // Prefer synced lyrics, fall back to plain lyrics
-    let lines = if let Some(synced) = &lrc_resp.synced_lyrics {
+    build_lyrics_result(
+        lrc_resp.track_name,
+        lrc_resp.artist_name,
+        lrc_resp.album_name,
+        lrc_resp.synced_lyrics,
+        lrc_resp.plain_lyrics,
+        track_name,
+        artist_name,
+    )
+}
+
+/// Try search with LRCLIB /api/search
+async fn try_search(
+    client: &reqwest::Client,
+    ua: &str,
+    track_name: &str,
+    artist_name: &str,
+) -> Result<LyricsResult, String> {
+    let mut query = track_name.to_string();
+    if !artist_name.is_empty() {
+        query = format!("{} {}", artist_name, track_name);
+    }
+
+    eprintln!("[Lyra] Searching LRCLIB: q='{}'", query);
+
+    let response = client
+        .get("https://lrclib.net/api/search")
+        .query(&[("q", &query)])
+        .header("User-Agent", ua)
+        .send()
+        .await
+        .map_err(|e| format!("LRCLIB search failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("LRCLIB search returned status: {}", response.status()));
+    }
+
+    let results: Vec<LrcLibSearchItem> = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse LRCLIB search response: {}", e))?;
+
+    eprintln!("[Lyra] Search returned {} results", results.len());
+
+    // Find the first result that has lyrics
+    for item in results {
+        if item.synced_lyrics.is_some() || item.plain_lyrics.is_some() {
+            return build_lyrics_result(
+                item.track_name,
+                item.artist_name,
+                item.album_name,
+                item.synced_lyrics,
+                item.plain_lyrics,
+                track_name,
+                artist_name,
+            );
+        }
+    }
+
+    Err("No lyrics found in search results".to_string())
+}
+
+/// Build LyricsResult from API response fields
+fn build_lyrics_result(
+    resp_track: Option<String>,
+    resp_artist: Option<String>,
+    resp_album: Option<String>,
+    synced_lyrics: Option<String>,
+    plain_lyrics: Option<String>,
+    fallback_track: &str,
+    fallback_artist: &str,
+) -> Result<LyricsResult, String> {
+    let lines = if let Some(synced) = &synced_lyrics {
         parse_lrc(synced)
-    } else if let Some(plain) = &lrc_resp.plain_lyrics {
+    } else if let Some(plain) = &plain_lyrics {
         plain
             .lines()
             .enumerate()
             .map(|(i, line)| LyricLine {
-                time_ms: (i as u64) * 3000, // rough estimate: 3s per line
+                time_ms: (i as u64) * 3000,
                 text: line.to_string(),
             })
             .collect()
     } else {
-        return Err("No lyrics available".to_string());
+        return Err("No lyrics content".to_string());
     };
 
+    if lines.is_empty() {
+        return Err("Empty lyrics".to_string());
+    }
+
     Ok(LyricsResult {
-        track_name: lrc_resp.track_name.unwrap_or(track_name),
-        artist_name: lrc_resp.artist_name.unwrap_or(artist_name),
-        album_name: lrc_resp.album_name.or(album_name),
+        track_name: resp_track.unwrap_or_else(|| fallback_track.to_string()),
+        artist_name: resp_artist.unwrap_or_else(|| fallback_artist.to_string()),
+        album_name: resp_album,
         lines,
         source: "LRCLIB".to_string(),
     })
@@ -102,7 +306,6 @@ pub fn parse_lrc(lrc_text: &str) -> Vec<LyricLine> {
             continue;
         }
 
-        // Try to parse timestamp tags: [mm:ss.xx] or [mm:ss.xxx] or [mm:ss]
         if let Some(text_start) = find_closing_bracket(line) {
             let timestamp_part = &line[1..text_start];
             let text = line[text_start + 1..].trim().to_string();
@@ -113,17 +316,14 @@ pub fn parse_lrc(lrc_text: &str) -> Vec<LyricLine> {
         }
     }
 
-    // Sort by time
     lines.sort_by_key(|l| l.time_ms);
     lines
 }
 
-/// Find the index of the closing bracket ']'
 fn find_closing_bracket(s: &str) -> Option<usize> {
     s.find(']')
 }
 
-/// Parse a timestamp like "01:23.45" or "01:23.456" or "01:23" into milliseconds
 fn parse_timestamp(ts: &str) -> Option<u64> {
     let parts: Vec<&str> = ts.split(':').collect();
     if parts.len() != 2 {
@@ -136,7 +336,6 @@ fn parse_timestamp(ts: &str) -> Option<u64> {
 
     let millis = if seconds_part.len() > 1 {
         let frac_str = seconds_part[1];
-        // Pad or truncate to 3 digits
         let padded = format!("{:0<3}", frac_str);
         let padded = &padded[..3.min(padded.len())];
         padded.parse::<u64>().unwrap_or(0)
@@ -154,7 +353,6 @@ pub fn find_active_line(lines: Vec<LyricLine>, progress_ms: u64) -> Option<usize
         return None;
     }
 
-    // Binary search for the active line
     let mut low = 0;
     let mut high = lines.len();
 
@@ -167,8 +365,6 @@ pub fn find_active_line(lines: Vec<LyricLine>, progress_ms: u64) -> Option<usize
         }
     }
 
-    // low is now the first line whose time_ms > progress_ms
-    // So the active line is low - 1
     if low == 0 {
         Some(0)
     } else {

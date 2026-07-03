@@ -1,44 +1,99 @@
-import { useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useCallback, memo } from "react";
 import { useLyraStore } from "./store";
-import { THEMES } from "./types";
+import { THEMES, type Theme } from "./types";
+
+/** Memoized lyric line — only re-renders when isActive or theme changes */
+const LyricLine = memo(function LyricLine({
+  text,
+  isActive,
+  distance,
+  theme,
+  fontSize,
+  lineRef,
+}: {
+  text: string;
+  isActive: boolean;
+  distance: number;
+  theme: Theme;
+  fontSize: number;
+  lineRef: (el: HTMLDivElement | null) => void;
+}) {
+  const lineOpacity = isActive ? 1 : Math.max(0.25, 1 - distance * 0.15);
+
+  return (
+    <div
+      ref={lineRef}
+      className={`lyra-line ${isActive ? "active" : ""}`}
+      style={{
+        color: isActive ? theme.highlightColor : theme.textColor,
+        fontFamily: theme.fontFamily,
+        fontSize: isActive ? fontSize : fontSize * 0.85,
+        fontWeight: isActive ? "700" : theme.fontWeight,
+        opacity: lineOpacity,
+        textShadow: isActive ? theme.textShadow : "none",
+        transform: isActive ? "scale(1.05)" : "scale(1)",
+        transition: "all 0.35s ease-out",
+      }}
+    >
+      {text || "♪"}
+    </div>
+  );
+});
 
 export default function LyricsOverlay() {
   const {
     lyricLines,
-    activeLineIndex,
     lyricsLoading,
+    lyricsError,
     currentTrack,
     isPlaying,
+    activeLineIndex,
+    progressMs,
+    durationMs,
     theme,
     opacity,
     fontSize,
   } = useLyraStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const activeRef = useRef<HTMLDivElement>(null);
+  const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
   const themeConfig = THEMES[theme];
+
+  // Set line ref callback
+  const setLineRef = useCallback((el: HTMLDivElement | null, index: number) => {
+    lineRefs.current[index] = el;
+  }, []);
 
   // Auto-scroll to active line
   useEffect(() => {
-    if (activeRef.current && containerRef.current) {
-      const container = containerRef.current;
-      const active = activeRef.current;
-      const containerRect = container.getBoundingClientRect();
-      const activeRect = active.getBoundingClientRect();
+    const container = containerRef.current;
+    const activeLine = lineRefs.current[activeLineIndex];
 
-      const scrollTop =
-        active.offsetTop -
-        container.offsetTop -
-        containerRect.height / 2 +
-        activeRect.height / 2;
+    if (!container || !activeLine || lyricLines.length === 0) return;
 
-      container.scrollTo({
-        top: scrollTop,
-        behavior: "smooth",
-      });
+    const containerRect = container.getBoundingClientRect();
+    const lineRect = activeLine.getBoundingClientRect();
+
+    // Scroll so active line is roughly centered in the container
+    const lineOffsetTop = activeLine.offsetTop;
+    const targetScroll = lineOffsetTop - containerRect.height / 2 + lineRect.height / 2;
+
+    container.scrollTo({
+      top: Math.max(0, targetScroll),
+      behavior: "smooth",
+    });
+  }, [activeLineIndex, lyricLines.length]);
+
+  // Reset scroll on track change
+  useEffect(() => {
+    lineRefs.current = [];
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0 });
     }
-  }, [activeLineIndex]);
+  }, [currentTrack?.track_name, currentTrack?.artist_name]);
+
+  // Progress bar percentage
+  const progressPercent = durationMs > 0 ? Math.min((progressMs / durationMs) * 100, 100) : 0;
 
   // No track playing
   if (!currentTrack) {
@@ -51,10 +106,12 @@ export default function LyricsOverlay() {
           opacity: opacity / 100,
         }}
       >
+        {/* Draggable header area */}
+        <div className="lyra-drag-region" data-tauri-drag-region />
         <div className="lyra-empty">
           <div className="lyra-empty-icon">♪</div>
           <p style={{ color: themeConfig.dimColor, fontFamily: themeConfig.fontFamily }}>
-            Play a song on Spotify to see lyrics
+            Play a song on any media player to see lyrics
           </p>
         </div>
       </div>
@@ -70,16 +127,9 @@ export default function LyricsOverlay() {
         opacity: opacity / 100,
       }}
     >
-      {/* Track Info Header */}
-      <div className="lyra-header">
-        {currentTrack.album_art_url && (
-          <img
-            src={currentTrack.album_art_url}
-            alt={currentTrack.album_name}
-            className="lyra-album-art"
-          />
-        )}
-        <div className="lyra-track-info">
+      {/* Track Info Header - also drag region */}
+      <div className="lyra-header" data-tauri-drag-region>
+        <div className="lyra-track-info" style={{ flex: 1 }}>
           <div
             className="lyra-track-name"
             style={{
@@ -97,6 +147,7 @@ export default function LyricsOverlay() {
             }}
           >
             {currentTrack.artist_name}
+            {currentTrack.album_name && ` • ${currentTrack.album_name}`}
           </div>
         </div>
         <div className="lyra-play-status">
@@ -110,6 +161,17 @@ export default function LyricsOverlay() {
         </div>
       </div>
 
+      {/* Progress Bar */}
+      <div className="lyra-progress-container">
+        <div
+          className="lyra-progress-bar"
+          style={{
+            width: `${progressPercent}%`,
+            background: themeConfig.highlightColor,
+          }}
+        />
+      </div>
+
       {/* Lyrics Container */}
       <div className="lyra-lyrics-container" ref={containerRef}>
         {lyricsLoading ? (
@@ -117,6 +179,12 @@ export default function LyricsOverlay() {
             <div className="lyra-spinner" style={{ borderColor: themeConfig.highlightColor }} />
             <p style={{ color: themeConfig.dimColor, fontFamily: themeConfig.fontFamily }}>
               Fetching lyrics...
+            </p>
+          </div>
+        ) : lyricsError ? (
+          <div className="lyra-no-lyrics">
+            <p style={{ color: themeConfig.dimColor, fontFamily: themeConfig.fontFamily }}>
+              Could not find lyrics for this track
             </p>
           </div>
         ) : lyricLines.length === 0 ? (
@@ -127,61 +195,43 @@ export default function LyricsOverlay() {
           </div>
         ) : (
           <div className="lyra-lines">
-            {/* Spacer to center active line */}
+            {/* Top spacer so first line can be centered */}
             <div className="lyra-spacer" />
-            <AnimatePresence>
-              {lyricLines.map((line, index) => {
-                const isActive = index === activeLineIndex;
-                const isPast = index < activeLineIndex;
+            {lyricLines.map((line, index) => {
+              const isActive = index === activeLineIndex;
+              const distance = Math.abs(index - activeLineIndex);
 
-                return (
-                  <motion.div
-                    key={`${currentTrack.track_id}-${index}`}
-                    ref={isActive ? activeRef : null}
-                    className={`lyra-line ${isActive ? "active" : ""} ${isPast ? "past" : ""}`}
-                    style={{
-                      color: isActive
-                        ? themeConfig.highlightColor
-                        : isPast
-                        ? themeConfig.dimColor
-                        : themeConfig.textColor,
-                      fontFamily: themeConfig.fontFamily,
-                      fontSize: isActive ? fontSize : fontSize * 0.85,
-                      fontWeight: isActive ? "700" : themeConfig.fontWeight,
-                      textShadow: isActive ? themeConfig.textShadow : "none",
-                      opacity: isPast ? 0.4 : 1,
-                    }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{
-                      opacity: isPast ? 0.4 : 1,
-                      y: 0,
-                      scale: isActive ? 1.05 : 1,
-                    }}
-                    transition={{
-                      duration: 0.3,
-                      ease: "easeOut",
-                    }}
-                  >
-                    {line.text}
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-            {/* Spacer to center active line */}
+              return (
+                <LyricLine
+                  key={index}
+                  text={line.text}
+                  isActive={isActive}
+                  distance={distance}
+                  theme={themeConfig}
+                  fontSize={fontSize}
+                  lineRef={(el) => setLineRef(el, index)}
+                />
+              );
+            })}
+            {/* Bottom spacer so last line can be centered */}
             <div className="lyra-spacer" />
           </div>
         )}
       </div>
 
-      {/* Progress Bar */}
-      <div className="lyra-progress-container">
-        <div
-          className="lyra-progress-bar"
-          style={{
-            width: `${(currentTrack.progress_ms / currentTrack.duration_ms) * 100}%`,
-            background: themeConfig.highlightColor,
-          }}
-        />
+      {/* Source indicator */}
+      <div
+        className="lyra-source-indicator"
+        style={{
+          color: themeConfig.dimColor,
+          fontFamily: themeConfig.fontFamily,
+          fontSize: 11,
+          padding: "4px 12px",
+          textAlign: "right",
+          opacity: 0.5,
+        }}
+      >
+        via {currentTrack.source}
       </div>
     </div>
   );

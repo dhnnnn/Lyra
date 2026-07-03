@@ -1,12 +1,11 @@
-export interface CurrentlyPlaying {
+export interface NowPlaying {
   is_playing: boolean;
   track_name: string;
   artist_name: string;
   album_name: string;
-  album_art_url: string | null;
+  source: string;
   progress_ms: number;
   duration_ms: number;
-  track_id: string;
 }
 
 export interface LyricLine {
@@ -22,7 +21,7 @@ export interface LyricsResult {
   source: string;
 }
 
-export type ThemeName = "spotify" | "neon" | "minimal" | "story";
+export type ThemeName = "classic" | "neon" | "minimal" | "story";
 
 export interface Theme {
   name: ThemeName;
@@ -39,9 +38,9 @@ export interface Theme {
 }
 
 export const THEMES: Record<ThemeName, Theme> = {
-  spotify: {
-    name: "spotify",
-    label: "Spotify",
+  classic: {
+    name: "classic",
+    label: "Classic",
     background: "rgba(0, 0, 0, 0.6)",
     textColor: "#ffffff",
     highlightColor: "#1db954",
